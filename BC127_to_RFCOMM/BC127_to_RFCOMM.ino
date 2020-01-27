@@ -269,7 +269,7 @@ void loop()
           {
             while (serialPort.available())
               serialIn.addChar(serialPort.read());
-            debug(serialIn.Value());
+            //debug(serialIn.Value());
             if (serialIn.Value().indexOf("CLOSE_OK 15 SPP") < 0 && serialIn.Value().indexOf("OK 15 SPP") >= 0)
             {
               green();
