@@ -26,7 +26,7 @@ Bluetooth-Device is able to store one Smartphone-MAC. If device is Smartphone-MA
 
 ## Smartphone Issues
 ### Motorolo Moto G8+
-- Datapackage loss when display gets activated
+- high datapackage loss when display gets activated
 
 ### Motorolo Moto G6+
 - rare random datapackage loss: ~ 0.05%
