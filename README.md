@@ -4,7 +4,7 @@
 
 1. continuously blue LED: Bluetooth-Device System Initialisation (~5 seconds)
 2. slow blinking blue LED: Bluetooth-Device waits to activate the configuration mode (max. 7.5 seconds)
-3. continuously blue LED? ERROR: No Smartphone-MAC is stored! Restart Bluetooth-Device and activate configuration mode to store MAC (see "Configuration Mode")
+3. continuously red LED? ERROR: No Smartphone-MAC is stored! Restart Bluetooth-Device and activate configuration mode to store MAC (see "Configuration Mode")
 4. very slow blinking green LED: Bluetooth-Device tries to connect to linked Smartphone
 
 ## Configuration Mode
@@ -14,7 +14,7 @@ Bluetooth-Device is able to store one Smartphone-MAC. If device is Smartphone-MA
 3. (re)start Bluetooth device
 4. when Bluetooth-Device waits for configuration mode (see 2. in "Normal Boot Sequence"): link to the Bluetooth-Device using IHAB-App oder IHABBluetoothAudio-App
 7. In Configuration Mode blue LED will blink fast (max. 10 seconds), Smartphone-MAC will be stored automatically.
-8. If Smartphone-MAC is stored, green LED blinks fast 5 times. Finally, normal boot sequence step 4 will start. If storing of Smartphone-MAC fails, blue LED will blink continuously. Please repeat step 6 very fast OR step 3.
+8. If Smartphone-MAC is stored, green LED blinks fast 5 times. Finally, normal boot sequence step 4 will start. If storing of Smartphone-MAC fails, blue LED will blink continuously. Please repeat step 6 quick OR step 3.
 
 ## Troubleshoot
 **Datatransmission fails** 
