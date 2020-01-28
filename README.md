@@ -23,3 +23,13 @@ Bluetooth-Device is able to store one Smartphone-MAC. If device is Smartphone-MA
 3. Tap "Reset"
 4. Tap "Restore Network Settings"
 5. Confirm
+
+## Smartphone Issues
+### Motorolo Moto G8+
+- Datapackage loss when display gets activated
+
+### Motorolo Moto G6+
+- rare random datapackage loss: ~ 0.05%
+
+### Nokia One
+- rare random datapackage loss: ~ 0.05%
