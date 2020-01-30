@@ -128,58 +128,6 @@
             tools:layout_editor_absoluteY="193dp">
 
             <TextView
-                android:id="@+id/textCorruptLabel"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="8dp"
-                android:layout_marginTop="8dp"
-                android:text="Corrupt:" />
-
-            <TextView
-                android:id="@+id/textCorruptValue"
-                android:layout_width="50dp"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="8dp"
-                android:layout_marginTop="8dp"
-                android:text="0.000"
-                android:textAlignment="textEnd" />
-
-            <TextView
-                android:id="@+id/textCorruptPercent"
-                android:layout_width="20dp"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="8dp"
-                android:layout_marginTop="8dp"
-                android:text="%" />
-
-            <TextView
-                android:id="@+id/textCorruptRealNumbersLabel"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="8dp"
-                android:layout_marginTop="8dp"
-                android:layout_marginEnd="8dp"
-                android:text="0"
-                android:textAlignment="textEnd" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="30dp"
-            android:layout_marginEnd="8dp"
-            android:layout_marginLeft="8dp"
-            android:layout_marginRight="8dp"
-            android:layout_marginStart="8dp"
-            android:orientation="horizontal"
-            android:visibility="visible"
-            android:weightSum="1"
-            app:layout_constraintHorizontal_bias="0.505"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent"
-            tools:layout_editor_absoluteY="193dp">
-
-            <TextView
                 android:id="@+id/textLostLabel"
                 android:layout_width="50dp"
                 android:layout_height="wrap_content"

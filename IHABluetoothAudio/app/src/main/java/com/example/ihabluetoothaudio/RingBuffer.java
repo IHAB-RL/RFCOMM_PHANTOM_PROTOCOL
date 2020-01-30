@@ -1,6 +1,6 @@
 package com.example.ihabluetoothaudio;
 
-class RingBuffer {
+public class RingBuffer {
     private byte[] Data;
     private int idx;
 

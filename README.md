@@ -1,5 +1,15 @@
 # RFCOMM_PHANTOM_PROTOCOL
 
+All current midclass (or above) Android Smartphones should fulfill the requirements. Smartphones without bloatware should be preferred, like Andoid One Phones or current Motorola phones.
+
+## Testet Smartphones ##
+**Android 9**
+- Motorola Moto G8+
+- Nokia 7+
+
+**Android 8**
+- Motorola Moto G6+
+
 ## Normal Boot Sequence
 
 1. continuously blue LED: Bluetooth-Device System Initialisation (~5 seconds)
@@ -24,12 +34,11 @@ Bluetooth-Device is able to store one Smartphone-MAC. If device is Smartphone-MA
 4. Tap "Restore Network Settings"
 5. Confirm
 
+**Avoiding package loss**
+- disable WIFI or 
+- enable FlightMode + enable Bluetooth
+
 ## Smartphone Issues
-### Motorolo Moto G8+
-- high datapackage loss when display gets activated
 
-### Motorolo Moto G6+
-- rare random datapackage loss: ~ 0.05%
-
-### Nokia One
-- rare random datapackage loss: ~ 0.05%
+### Motorola Moto G8+
+- high datapackage loss when display gets activated (solution in  "Troubleshoot: Avoiding package loss")

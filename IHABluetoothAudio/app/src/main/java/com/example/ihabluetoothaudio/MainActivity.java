@@ -6,10 +6,12 @@ package com.example.ihabluetoothaudio;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.PowerManager;
@@ -25,6 +27,8 @@ import com.example.ihabluetoothaudio.bluetotohspp.library.BluetoothSPP;
 import com.example.ihabluetoothaudio.bluetotohspp.library.BluetoothState;
 import com.example.ihabluetoothaudio.bluetotohspp.library.DeviceList;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
@@ -38,20 +42,16 @@ public class MainActivity extends AppCompatActivity {
     private static final int block_size = 64;
     private static final int RECORDER_SAMPLERATE = 16000;
     private int AudioBufferSize = block_size * 4;
-    private RingBuffer ringBuffer = new RingBuffer(AudioBufferSize * 2);
-    private byte[] AudioBlock = new byte[AudioBufferSize];
-
     private int BufferElements2Rec = 2048; // block_size * 16; // want to play 2048 (2K) since 2 bytes we use only 1024
     private static final int RECORDER_CHANNELS = AudioFormat.CHANNEL_IN_STEREO;
     private static final int RECORDER_AUDIO_ENCODING = AudioFormat.ENCODING_PCM_16BIT;
     private AudioTrack audioTrack = null;
 
     private short AudioVolume = 0;
-    private long lostBlockCount, completeBlockCount, countBlocks, corruptBlocks, BlockCount;
-    private int countSamples, additionalBytesCount;
+    private long lostBlockCount, BlockCount;
     private boolean liveAudioOut = false;
-    byte checksum = 0;
-    private boolean IsBluetoothConnectionPingNecessary = false;
+
+    private ConnectedThread mConnectedThread;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,25 +60,44 @@ public class MainActivity extends AppCompatActivity {
         //getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         findViewById(R.id.button_VolumeUp).setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) { AudioVolume += 1; setVolume(); }
+            public void onClick(View v) {
+                AudioVolume += 1;
+                setVolume();
+            }
         });
-        findViewById(R.id.button_VolumeDown).setOnClickListener(new View.OnClickListener() {public void onClick(View v) { AudioVolume -= 1; setVolume(); }});
-        findViewById(R.id.checkBox_adaptiveBitShift).setOnClickListener(new View.OnClickListener() {public void onClick(View v) { setAdaptiveBitShift(); }});
-        findViewById(R.id.checkBox_LiveAudioOut).setOnClickListener(new View.OnClickListener() {public void onClick(View v) { setLiveAudioOut(); }});
+        findViewById(R.id.button_VolumeDown).setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                AudioVolume -= 1;
+                setVolume();
+            }
+        });
+        findViewById(R.id.checkBox_adaptiveBitShift).setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                setAdaptiveBitShift();
+            }
+        });
+        findViewById(R.id.checkBox_LiveAudioOut).setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                setLiveAudioOut();
+            }
+        });
         findViewById(R.id.button_Link).setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 Intent intent = new Intent(getApplicationContext(), DeviceList.class);
                 startActivityForResult(intent, BluetoothState.REQUEST_CONNECT_DEVICE);
             }
         });
+        WifiManager wifiManager = (WifiManager) getApplicationContext().getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        if (wifiManager.isWifiEnabled()) {
+            ((TextView) findViewById(R.id.LogView)).append("WiFi is enabled!\nPlease disable for lossless transmission!\n\n");//
+        }
         initAudioTrack();
         initBluetooth();
     }
 
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if(requestCode == BluetoothState.REQUEST_CONNECT_DEVICE && resultCode == Activity.RESULT_OK)
-        {
+        if (requestCode == BluetoothState.REQUEST_CONNECT_DEVICE && resultCode == Activity.RESULT_OK) {
             bt.connect(data);
             new Handler().postDelayed(new Runnable() {
                 @Override
@@ -95,132 +114,61 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void initBluetooth()
-    {
+    private void initBluetooth() {
         bt = new BluetoothSPP(this);
         if (bt.isBluetoothEnabled() == true) {
             bt.setBluetoothStateListener(new BluetoothSPP.BluetoothStateListener() {
                 public void onServiceStateChanged(int state) {
-                    PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
-                    PowerManager.WakeLock wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyApp::MyWakelockTag");
-                    IsBluetoothConnectionPingNecessary = false;
-                    if (state == BluetoothState.STATE_CONNECTED)
-                    {
-                        if (!wakeLock.isHeld()) wakeLock.acquire();
-                        BlockCount = 0;
-                        completeBlockCount = 0;
-                        lostBlockCount = 0;
-                        countSamples = 0;
-                        checksum = 0;
-                        countBlocks = 0;
-                        corruptBlocks = 0;
-                        additionalBytesCount = 0;
+                    if (state == BluetoothState.STATE_CONNECTED) {
                         ((TextView) findViewById(R.id.LogView)).append("Bluetooth State changed: STATE_CONNECTED\n");
                         findViewById(R.id.button_Link).setEnabled(false);
+                        mConnectedThread = new ConnectedThread(bt.getBluetoothService().getConnectedThread().getInputStream());
+                        mConnectedThread.setPriority(Thread.MAX_PRIORITY);
+                        mConnectedThread.start();
                     } else if (state == BluetoothState.STATE_CONNECTING) {
                         ((TextView) findViewById(R.id.LogView)).append("Bluetooth State changed: STATE_CONNECTING\n");
-                    }
-                    else if (state == BluetoothState.STATE_LISTEN)
-                    {
-                        if (wakeLock.isHeld()) wakeLock.release();
+                        mConnectedThread = null;
+                    } else if (state == BluetoothState.STATE_LISTEN) {
                         ((TextView) findViewById(R.id.LogView)).append("Bluetooth State changed: STATE_LISTEN\n");
                         findViewById(R.id.button_Link).setEnabled(true);
-                    }
-                    else if (state == BluetoothState.STATE_NONE) {
-                        if (wakeLock.isHeld()) wakeLock.release();
+                        mConnectedThread = null;
+                    } else if (state == BluetoothState.STATE_NONE) {
                         ((TextView) findViewById(R.id.LogView)).append("Bluetooth State changed: STATE_NONE\n");
-                    }
-                    else
-                    {
-                        if (wakeLock.isHeld()) wakeLock.release();
-                    }
-                }
-            });
-            bt.setOnDataReceivedListener(new BluetoothSPP.OnDataReceivedListener() {
-                public void onDataReceived(byte[] data) {
-                    for (int i = 0; i < data.length; i++)
-                    {
-                        IsBluetoothConnectionPingNecessary = true;
-                        ringBuffer.addByte(data[i]);
-                        countSamples++;
-                        if (ringBuffer.getByte(-2) == (byte) 0x00 && ringBuffer.getByte(-3) == (byte) 0x80) {
-                            switch (((ringBuffer.getByte(-4) & 0xFF) << 8) | (ringBuffer.getByte(-5) & 0xFF)) { // Check Protocol-Version
-                                case 1:
-                                    if ((ringBuffer.getByte(2 - (AudioBufferSize + 12)) == (byte) 0xFF && ringBuffer.getByte(1 - (AudioBufferSize + 12)) == (byte) 0x7F))
-                                        additionalBytesCount = 12;
-                                    break;
-                            }
-                            if (ringBuffer.getByte(2 - (AudioBufferSize + additionalBytesCount)) == (byte) 0xFF && ringBuffer.getByte(1 - (AudioBufferSize + additionalBytesCount)) == (byte) 0x7F) {
-                                if (ringBuffer.getByte(0) == checksum) {
-                                    long tmpBlockCount = BlockCount;
-                                    AudioBlock = Arrays.copyOf(ringBuffer.data(3 - (AudioBufferSize + additionalBytesCount), AudioBufferSize), AudioBufferSize);
-                                    AudioVolume = (short)(((ringBuffer.getByte(-8) & 0xFF) << 8) | (ringBuffer.getByte(-9) & 0xFF));
-                                    BlockCount = ((ringBuffer.getByte(-6) & 0xFF) << 8) | (ringBuffer.getByte(-7) & 0xFF);
-                                    if (tmpBlockCount < BlockCount) {
-                                        bt.send(" ", false);
-                                        lostBlockCount += BlockCount - (tmpBlockCount + 1);
-                                        completeBlockCount += BlockCount - tmpBlockCount;
-                                    }
-                                    writeData(AudioBlock);
-                                }
-                                countSamples = 0;
-                                checksum = data[i];
-                                countBlocks++;
-                            }
-                        }
-                        if (additionalBytesCount > 0 && countSamples == AudioBufferSize + additionalBytesCount) {
-                            countSamples = 0;
-                            corruptBlocks++;
-                            countBlocks++;
-                        }
-                        checksum ^= data[i];
+                        mConnectedThread = null;
                     }
                 }
             });
             bt.setupService();
             bt.startService(BluetoothState.DEVICE_OTHER);
-        }
-        else{
+        } else {
             bt.enable();
             initBluetooth();
         }
-        new Timer().scheduleAtFixedRate(new TimerTask() {
-            @Override
-            public void run() {
-                if (IsBluetoothConnectionPingNecessary) {
-                    bt.send(" ", false);
-                }
-            }
-        }, 0, 100);
     }
 
     private void writeData(byte[] data) {
-        if (audioTrack != null && liveAudioOut)
-            audioTrack.write(data, 0, AudioBufferSize);
+        if (audioTrack != null && liveAudioOut) {
+            audioTrack.write(data, 0, AudioBufferSize, AudioTrack.WRITE_NON_BLOCKING);
+        }
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 ((TextView) findViewById(R.id.textViewVolume)).setText(String.format("%d", AudioVolume));
-                ((TextView) findViewById(R.id.textCorruptValue)).setText(String.format("%.3f", ((double) corruptBlocks / (double) countBlocks) * 100.0));
-                ((TextView) findViewById(R.id.textLostValue)).setText(String.format("%.3f", ((double) lostBlockCount / (double) completeBlockCount) * 100.0));
-                ((TextView) findViewById(R.id.textCorruptRealNumbersLabel)).setText(String.format("%d", corruptBlocks));
+                ((TextView) findViewById(R.id.textLostValue)).setText(String.format("%.3f", (double) (lostBlockCount  * 100.0 / BlockCount)));
                 ((TextView) findViewById(R.id.textLostRealNumbersLabel)).setText(String.format("%d", lostBlockCount));
             }
         });
-
     }
 
-    private void setVolume()
-    {
-        AudioVolume = (short)Math.max(Math.min(AudioVolume, 9), -9);
+    private void setVolume() {
+        AudioVolume = (short) Math.max(Math.min(AudioVolume, 9), -9);
         String data = "V+" + AudioVolume;
         if (AudioVolume < 0)
             data = "V" + AudioVolume;
         bt.send(data, false);
     }
 
-    private void setAdaptiveBitShift()
-    {
+    private void setAdaptiveBitShift() {
         CheckBox checkbox = findViewById(R.id.checkBox_adaptiveBitShift);
         Button button1 = findViewById(R.id.button_VolumeUp);
         Button button2 = findViewById(R.id.button_VolumeDown);
@@ -252,6 +200,85 @@ public class MainActivity extends AppCompatActivity {
                 audioTrack.play();
             else
                 audioTrack.stop();
+        }
+    }
+
+    class ConnectedThread extends Thread {
+        private final InputStream mmInStream;
+
+        ConnectedThread(InputStream stream) {
+            mmInStream = stream;
+        }
+
+        public void run() {
+            byte[] data = new byte[block_size];
+            RingBuffer ringBuffer = new RingBuffer(AudioBufferSize * 2);
+            int i, lastBlockNumber = 0, currBlockNumber = 0, additionalBytesCount = 0;
+            byte[] AudioBlock, emptyAudioBlock = new byte[AudioBufferSize];
+            byte checksum = 0;
+            int millisPerBlock = block_size * 1000 / RECORDER_SAMPLERATE;
+            BlockCount = 0;
+            lostBlockCount = 0;
+            Long lastBluetoothPingTimer = System.currentTimeMillis(), lastEmptyPackageTimer = System.currentTimeMillis();
+            try {
+                while (true) {
+                    if (mmInStream.available() >= data.length) {
+                        mmInStream.read(data, 0, data.length);
+                        for (i = 0; i < data.length; i++) {
+                            ringBuffer.addByte(data[i]);
+                            if (ringBuffer.getByte(-2) == (byte) 0x00 && ringBuffer.getByte(-3) == (byte) 0x80) {
+                                switch (((ringBuffer.getByte(-4) & 0xFF) << 8) | (ringBuffer.getByte(-5) & 0xFF)) { // Check Protocol-Version
+                                    case 1:
+                                        if ((ringBuffer.getByte(2 - (AudioBufferSize + 12)) == (byte) 0xFF && ringBuffer.getByte(1 - (AudioBufferSize + 12)) == (byte) 0x7F))
+                                            additionalBytesCount = 12;
+                                        break;
+                                }
+                                if (ringBuffer.getByte(2 - (AudioBufferSize + additionalBytesCount)) == (byte) 0xFF && ringBuffer.getByte(1 - (AudioBufferSize + additionalBytesCount)) == (byte) 0x7F) {
+                                    if (ringBuffer.getByte(0) == checksum) {
+                                        AudioBlock = Arrays.copyOf(ringBuffer.data(3 - (AudioBufferSize + additionalBytesCount), AudioBufferSize), AudioBufferSize);
+                                        AudioVolume = (short) (((ringBuffer.getByte(-8) & 0xFF) << 8) | (ringBuffer.getByte(-9) & 0xFF));
+                                        currBlockNumber = ((ringBuffer.getByte(-6) & 0xFF) << 8) | (ringBuffer.getByte(-7) & 0xFF);
+                                        if (currBlockNumber < lastBlockNumber && lastBlockNumber - currBlockNumber > currBlockNumber + (65536 - lastBlockNumber))
+                                            currBlockNumber += 65536;
+                                        if (lastBlockNumber < currBlockNumber) {
+                                            BlockCount += currBlockNumber - lastBlockNumber;
+                                            lostBlockCount += currBlockNumber - lastBlockNumber - 1;
+                                            if (currBlockNumber > lastBlockNumber + 1) {
+                                                Log.d("_IHA_", "CurrentBlock: " + currBlockNumber + "\tLostBlocks: " + (currBlockNumber - lastBlockNumber - 1));
+                                                while (lastBlockNumber < currBlockNumber) {
+                                                    writeData(emptyAudioBlock);
+                                                    lastBlockNumber++;
+                                                }
+                                            }
+                                            lastBlockNumber = currBlockNumber % 65536;
+                                            writeData(AudioBlock);
+                                        }
+                                    }
+                                    checksum = data[i];
+                                }
+                            }
+                            checksum ^= data[i];
+                        }
+                        lastEmptyPackageTimer = System.currentTimeMillis();
+                    }
+                    if (BlockCount > 0 && System.currentTimeMillis() - lastEmptyPackageTimer > millisPerBlock * 10) {
+                        for (long count = 0; count < (System.currentTimeMillis() - lastEmptyPackageTimer) / millisPerBlock; count++) {
+                            BlockCount++;
+                            lostBlockCount++;
+                            lastBlockNumber++;
+                            writeData(emptyAudioBlock);
+                        }
+                        lastEmptyPackageTimer = System.currentTimeMillis();
+                    }
+                    if (BlockCount > 0 && System.currentTimeMillis() - lastBluetoothPingTimer > 100) {
+                        bt.send(" ", false);
+                        lastBluetoothPingTimer = System.currentTimeMillis();
+                    }
+                    if ((mmInStream.available() * 100 / 100802) > 90)
+                        Log.d("_IHA_", "WARNING: Inputstream buffer nearly full (" + (mmInStream.available() * 100 / 100802) + "%)");
+                }
+            } catch (IOException e) {
+            }
         }
     }
 }
