@@ -215,7 +215,7 @@ public class BluetoothService {
     }
 
     // Indicate that the connection was lost and notify the UI Activity
-    private void connectionLost() {
+    public void connectionLost() {
         // Start the service over to restart listening mode
         BluetoothService.this.start(BluetoothService.this.isAndroid);
     }
@@ -381,16 +381,7 @@ public class BluetoothService {
         }
 
         public void run() {
-            while (true) {
-                try {
-                    mmInStream.available();
-                } catch (IOException e) {
-                    connectionLost();
-                    // Start the service over to restart listening mode
-                    BluetoothService.this.start(BluetoothService.this.isAndroid);
-                    break;
-                }
-            }
+            while (true);
         }
 
         // Write to the connected OutStream.

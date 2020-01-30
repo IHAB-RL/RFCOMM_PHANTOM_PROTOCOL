@@ -1,11 +1,10 @@
 # RFCOMM_PHANTOM_PROTOCOL
 
-All current midclass (or above) Android Smartphones should fulfill the requirements. Smartphones without bloatware should be preferred, like Andoid One Phones or current Motorola phones.
+In theory, all current midclass (or above) Android Smartphones should fulfill the requirements. Smartphones without bloatware should be preferred, like Andoid One Phones or current Motorola phones.
 
-## Testet Smartphones ##
+## Successfull tested Smartphones ##
 **Android 9**
 - Motorola Moto G8+
-- Nokia 7+
 
 **Android 8**
 - Motorola Moto G6+
@@ -28,6 +27,7 @@ Bluetooth-Device is able to store one Smartphone-MAC. If device is Smartphone-MA
 
 ## Troubleshoot
 **Datatransmission fails** 
+Reset "Restore Network Settings":
 1. Open the Android Settings App 
 2. Tap "System"
 3. Tap "Reset"
@@ -42,3 +42,6 @@ Bluetooth-Device is able to store one Smartphone-MAC. If device is Smartphone-MA
 
 ### Motorola Moto G8+
 - high datapackage loss when display gets activated (solution in  "Troubleshoot: Avoiding package loss")
+
+### Nokia 7+
+- high datapackage loss when App is not in foreground or display is off
