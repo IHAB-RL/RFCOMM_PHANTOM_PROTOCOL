@@ -14,7 +14,7 @@ In theory, all current midclass (or above) Android Smartphones should fulfill th
 - Motorola Moto G6+
 - Samsung Galaxy A6+
 
-## Normal Boot Sequence
+## Boot Sequence
 
 1. continuously blue LED: Bluetooth-Device System Initialisation (~5 seconds)
 2. slow blinking blue LED: Bluetooth-Device waits to activate the configuration mode (max. 7.5 seconds)
