@@ -145,7 +145,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void BluetoothTransmissionStart() {
+    private void AudioTransmissionStart() {
         Log.d("_IHA_", "Transmission: START");
     }
 
@@ -163,7 +163,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void BluetoothTransmissionEnd() {
+    private void AudioTransmissionEnd() {
         Log.d("_IHA_", "Transmission: END");
     }
 
@@ -246,7 +246,7 @@ public class MainActivity extends AppCompatActivity {
                                 if (ringBuffer.getByte(2 - (AudioBufferSize + additionalBytesCount)) == (byte) 0xFF && ringBuffer.getByte(1 - (AudioBufferSize + additionalBytesCount)) == (byte) 0x7F) {
                                     if (ringBuffer.getByte(0) == (checksum ^ ringBuffer.getByte(0))) {
                                         if (!initialized) {
-                                            BluetoothTransmissionStart();
+                                            AudioTransmissionStart();
                                             initialized = true;
                                         }
                                         AudioVolume = (short) (((ringBuffer.getByte(-8) & 0xFF) << 8) | (ringBuffer.getByte(-9) & 0xFF));
@@ -289,7 +289,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                         if (System.currentTimeMillis() - lastStreamTimer > 20 * 1000) // 20 seconds
                         {
-                            if (initialized) BluetoothTransmissionEnd();
+                            if (initialized) AudioTransmissionEnd();
                             bt.getBluetoothService().connectionLost();
                             bt.getBluetoothService().start(false);
                         }
