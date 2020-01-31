@@ -1,6 +1,6 @@
 # RFCOMM_PHANTOM_PROTOCOL
 
-In theory, all current midclass (or above) Android Smartphones should fulfill the requirements. Smartphones without bloatware should be preferred, like Andoid One Phones or current Motorola phones.
+In theory, all current midclass (or above) Android Smartphones should fulfill the requirements. Smartphones without bloatware should be preferred, like Andoid One Phones. Best results were achieved with Motorola phones.
 
 ## Successfull tested Smartphones ##
 **Android 9**
@@ -32,6 +32,7 @@ Bluetooth-Device is able to store one Smartphone-MAC. If device is Smartphone-MA
 
 ## Troubleshoot
 **Datatransmission fails** 
+
 Reset "Restore Network Settings":
 1. Open the Android Settings App 
 2. Tap "System"
