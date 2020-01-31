@@ -5,9 +5,14 @@ In theory, all current midclass (or above) Android Smartphones should fulfill th
 ## Successfull tested Smartphones ##
 **Android 9**
 - Motorola Moto G8+
+- Nokia 7+
+
+**Android 8.1**
+- Honor 8X
 
 **Android 8**
 - Motorola Moto G6+
+- Samsung Galaxy A6+
 
 ## Normal Boot Sequence
 
@@ -42,6 +47,3 @@ Reset "Restore Network Settings":
 
 ### Motorola Moto G8+
 - high datapackage loss when display gets activated (solution in  "Troubleshoot: Avoiding package loss")
-
-### Nokia 7+
-- high datapackage loss when App is not in foreground or display is off

@@ -381,7 +381,6 @@ public class BluetoothService {
         }
 
         public void run() {
-            while (true);
         }
 
         // Write to the connected OutStream.

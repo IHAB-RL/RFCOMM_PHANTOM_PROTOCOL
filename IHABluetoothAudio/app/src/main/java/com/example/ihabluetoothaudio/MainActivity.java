@@ -122,17 +122,17 @@ public class MainActivity extends AppCompatActivity {
                         mConnectedThread.setPriority(Thread.MAX_PRIORITY);
                         mConnectedThread.start();
                     } else {
+                        if (mConnectedThread != null) {
+                            mConnectedThread = null;
+                        }
                         if (wakeLock.isHeld()) wakeLock.release();
                         if (state == BluetoothState.STATE_CONNECTING) {
                             ((TextView) findViewById(R.id.LogView)).append("Bluetooth State changed: STATE_CONNECTING\n");
-                            mConnectedThread = null;
                         } else if (state == BluetoothState.STATE_LISTEN) {
                             ((TextView) findViewById(R.id.LogView)).append("Bluetooth State changed: STATE_LISTEN\n");
                             findViewById(R.id.button_Link).setEnabled(true);
-                            mConnectedThread = null;
                         } else if (state == BluetoothState.STATE_NONE) {
                             ((TextView) findViewById(R.id.LogView)).append("Bluetooth State changed: STATE_NONE\n");
-                            mConnectedThread = null;
                         }
                     }
                 }
@@ -143,6 +143,10 @@ public class MainActivity extends AppCompatActivity {
             bt.enable();
             initBluetooth();
         }
+    }
+
+    private void BluetoothTransmissionStart() {
+        Log.d("_IHA_", "Transmission: START");
     }
 
     private void writeData(byte[] data) {
@@ -157,6 +161,10 @@ public class MainActivity extends AppCompatActivity {
                 ((TextView) findViewById(R.id.textLostRealNumbersLabel)).setText(String.format("%d", lostBlockCount));
             }
         });
+    }
+
+    private void BluetoothTransmissionEnd() {
+        Log.d("_IHA_", "Transmission: END");
     }
 
     private void setVolume() {
@@ -204,6 +212,7 @@ public class MainActivity extends AppCompatActivity {
 
     class ConnectedThread extends Thread {
         private final InputStream mmInStream;
+        private boolean initialized = false;
 
         ConnectedThread(InputStream stream) {
             mmInStream = stream;
@@ -212,67 +221,82 @@ public class MainActivity extends AppCompatActivity {
         public void run() {
             RingBuffer ringBuffer = new RingBuffer(AudioBufferSize * 2);
             int alivePingTimeout = 100, i, lastBlockNumber = 0, currBlockNumber = 0, additionalBytesCount = 0;
-            byte[] emptyAudioBlock = new byte[AudioBufferSize];
+            byte[] data = new byte[1024], emptyAudioBlock = new byte[AudioBufferSize];
             byte checksum = 0;
-            int millisPerBlock = block_size * 1000 / RECORDER_SAMPLERATE;
+            int timeoutBlockLimit = 50, millisPerBlock = block_size * 1000 / RECORDER_SAMPLERATE;
             BlockCount = 0;
             lostBlockCount = 0;
-            Long lastBluetoothPingTimer = System.currentTimeMillis(), lastEmptyPackageTimer = System.currentTimeMillis();
-            boolean initialized = false;
+            initialized = false;
+            Long lastBluetoothPingTimer = System.currentTimeMillis(), lastEmptyPackageTimer = System.currentTimeMillis(), lastStreamTimer = System.currentTimeMillis();
             try {
                 while (true) {
-                    if (mmInStream.available() > 0) {
-                        ringBuffer.addByte((byte) mmInStream.read());
-                        checksum ^= ringBuffer.getByte(0);
-                        if (ringBuffer.getByte(-2) == (byte) 0x00 && ringBuffer.getByte(-3) == (byte) 0x80) {
-                            if (!initialized) {
-                                switch (((ringBuffer.getByte(-4) & 0xFF) << 8) | (ringBuffer.getByte(-5) & 0xFF)) { // Check Protocol-Version
-                                    case 1:
-                                        additionalBytesCount = 12;
-                                        break;
-                                }
-                            }
-                            if (ringBuffer.getByte(2 - (AudioBufferSize + additionalBytesCount)) == (byte) 0xFF && ringBuffer.getByte(1 - (AudioBufferSize + additionalBytesCount)) == (byte) 0x7F) {
-                                if (ringBuffer.getByte(0) == (checksum ^ ringBuffer.getByte(0))) {
-                                    initialized = true;
-                                    AudioVolume = (short) (((ringBuffer.getByte(-8) & 0xFF) << 8) | (ringBuffer.getByte(-9) & 0xFF));
-                                    currBlockNumber = ((ringBuffer.getByte(-6) & 0xFF) << 8) | (ringBuffer.getByte(-7) & 0xFF);
-                                    if (currBlockNumber < lastBlockNumber && lastBlockNumber - currBlockNumber > currBlockNumber + (65536 - lastBlockNumber))
-                                        currBlockNumber += 65536;
-                                    if (lastBlockNumber < currBlockNumber) {
-                                        BlockCount += currBlockNumber - lastBlockNumber;
-                                        lostBlockCount += currBlockNumber - lastBlockNumber - 1;
-                                        while (lastBlockNumber < currBlockNumber - 1) {
-                                            Log.d("_IHA_", "CurrentBlock: " + currBlockNumber + "\tLostBlocks: " + lostBlockCount);
-                                            writeData(emptyAudioBlock);
-                                            lastBlockNumber++;
-                                        }
-                                        lastBlockNumber = currBlockNumber % 65536;
-                                        writeData(ringBuffer.data(3 - (AudioBufferSize + additionalBytesCount), AudioBufferSize));
+                    if (mmInStream.available() >= data.length) {
+                        mmInStream.read(data, 0, data.length);
+                        for (i = 0; i < data.length; i++) {
+                            ringBuffer.addByte(data[i]);
+                            checksum ^= ringBuffer.getByte(0);
+                            if (ringBuffer.getByte(-2) == (byte) 0x00 && ringBuffer.getByte(-3) == (byte) 0x80) {
+                                if (!initialized) {
+                                    switch (((ringBuffer.getByte(-4) & 0xFF) << 8) | (ringBuffer.getByte(-5) & 0xFF)) { // Check Protocol-Version
+                                        case 1:
+                                            additionalBytesCount = 12;
+                                            break;
                                     }
                                 }
-                                checksum = 0;
+                                if (ringBuffer.getByte(2 - (AudioBufferSize + additionalBytesCount)) == (byte) 0xFF && ringBuffer.getByte(1 - (AudioBufferSize + additionalBytesCount)) == (byte) 0x7F) {
+                                    if (ringBuffer.getByte(0) == (checksum ^ ringBuffer.getByte(0))) {
+                                        if (!initialized) {
+                                            BluetoothTransmissionStart();
+                                            initialized = true;
+                                        }
+                                        AudioVolume = (short) (((ringBuffer.getByte(-8) & 0xFF) << 8) | (ringBuffer.getByte(-9) & 0xFF));
+                                        currBlockNumber = ((ringBuffer.getByte(-6) & 0xFF) << 8) | (ringBuffer.getByte(-7) & 0xFF);
+                                        if (currBlockNumber < lastBlockNumber && lastBlockNumber - currBlockNumber > currBlockNumber + (65536 - lastBlockNumber))
+                                            currBlockNumber += 65536;
+                                        if (lastBlockNumber < currBlockNumber) {
+                                            BlockCount += currBlockNumber - lastBlockNumber;
+                                            lostBlockCount += currBlockNumber - lastBlockNumber - 1;
+                                            while (lastBlockNumber < currBlockNumber - 1) {
+                                                Log.d("_IHA_", "CurrentBlock: " + currBlockNumber + "\tLostBlocks: " + lostBlockCount);
+                                                writeData(emptyAudioBlock);
+                                                lastBlockNumber++;
+                                            }
+                                            lastBlockNumber = currBlockNumber % 65536;
+                                            writeData(ringBuffer.data(3 - (AudioBufferSize + additionalBytesCount), AudioBufferSize));
+                                            lastStreamTimer = System.currentTimeMillis();
+                                        } else
+                                            Log.d("_IHA_", "CurrentBlock: " + currBlockNumber + "\tTOO SLOW!");
+                                    }
+                                    checksum = 0;
+                                }
                             }
                         }
                         lastEmptyPackageTimer = System.currentTimeMillis();
-                    }
-                    else if (initialized && System.currentTimeMillis() - lastEmptyPackageTimer > millisPerBlock * 20) {
-                        for (long count = 0; count < (System.currentTimeMillis() - lastEmptyPackageTimer) / millisPerBlock; count++) {
+                    } else if (initialized && System.currentTimeMillis() - lastEmptyPackageTimer > millisPerBlock * timeoutBlockLimit) {
+                        for (long count = 0; count < timeoutBlockLimit; count++) {
                             BlockCount++;
                             lostBlockCount++;
                             lastBlockNumber++;
                             writeData(emptyAudioBlock);
-                            lastEmptyPackageTimer = System.currentTimeMillis();
+                        }
+                        Log.d("_IHA_", "Transmission Timeout\t");
+                        lastEmptyPackageTimer = System.currentTimeMillis();
+                    }
+                    if (initialized) {
+                        if (System.currentTimeMillis() - lastBluetoothPingTimer > alivePingTimeout) {
+                            bt.send(" ", false);
+                            lastBluetoothPingTimer = System.currentTimeMillis();
+                        }
+                        if (System.currentTimeMillis() - lastStreamTimer > 20 * 1000) // 20 seconds
+                        {
+                            if (initialized) BluetoothTransmissionEnd();
+                            bt.getBluetoothService().connectionLost();
+                            bt.getBluetoothService().start(false);
                         }
                     }
-                    if (initialized && System.currentTimeMillis() - lastBluetoothPingTimer > alivePingTimeout) {
-                        bt.send(" ", false);
-                        lastBluetoothPingTimer = System.currentTimeMillis();
-                    }
+
                 }
             } catch (IOException e) {
-                bt.getBluetoothService().connectionLost();
-                bt.getBluetoothService().start(false);
             }
         }
     }
