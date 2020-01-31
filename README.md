@@ -1,4 +1,4 @@
-# RFCOMM_PHANTOM_PROTOCOL
+# RFCOMM PHANTOM PROTOCOL
 
 In theory, all current midclass (or above) Android Smartphones should fulfill the requirements. Smartphones without bloatware should be preferred, like Andoid One Phones. Best results were achieved with Motorola phones.
 
