@@ -2,7 +2,7 @@
 
 In theory, all current midclass (or above) Android Smartphones should fulfill the requirements. Smartphones without bloatware should be preferred, like Andoid One Phones. Best results were achieved with Motorola phones.
 
-## Successfull tested Smartphones ##
+## Successfully tested Smartphones ##
 **Android 9**
 - Motorola Moto G8+
 - Nokia 7+
