@@ -223,7 +223,7 @@ public class MainActivity extends AppCompatActivity {
             int alivePingTimeout = 100, i, lastBlockNumber = 0, currBlockNumber = 0, additionalBytesCount = 0;
             byte[] data = new byte[1024], emptyAudioBlock = new byte[AudioBufferSize];
             byte checksum = 0;
-            int timeoutBlockLimit = 50, millisPerBlock = block_size * 1000 / RECORDER_SAMPLERATE;
+            int timeoutBlockLimit = 500, millisPerBlock = block_size * 1000 / RECORDER_SAMPLERATE;
             BlockCount = 0;
             lostBlockCount = 0;
             initialized = false;
@@ -272,8 +272,8 @@ public class MainActivity extends AppCompatActivity {
                             }
                         }
                         lastEmptyPackageTimer = System.currentTimeMillis();
-                    } else if (initialized && System.currentTimeMillis() - lastEmptyPackageTimer > millisPerBlock * timeoutBlockLimit) {
-                        for (long count = 0; count < timeoutBlockLimit; count++) {
+                    } else if (initialized && System.currentTimeMillis() - lastEmptyPackageTimer > timeoutBlockLimit) {
+                        for (long count = 0; count < timeoutBlockLimit / millisPerBlock; count++) {
                             BlockCount++;
                             lostBlockCount++;
                             lastBlockNumber++;
@@ -287,7 +287,7 @@ public class MainActivity extends AppCompatActivity {
                             bt.send(" ", false);
                             lastBluetoothPingTimer = System.currentTimeMillis();
                         }
-                        if (System.currentTimeMillis() - lastStreamTimer > 20 * 1000) // 20 seconds
+                        if (System.currentTimeMillis() - lastStreamTimer > 5 * 1000) // 5 seconds
                         {
                             if (initialized) AudioTransmissionEnd();
                             bt.getBluetoothService().connectionLost();
