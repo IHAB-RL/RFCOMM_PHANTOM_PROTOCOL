@@ -56,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 AudioVolume += 1;
                 setVolume();
-            }
+        }
         });
         findViewById(R.id.button_VolumeDown).setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -213,6 +213,7 @@ public class MainActivity extends AppCompatActivity {
     class ConnectedThread extends Thread {
         private final InputStream mmInStream;
         private boolean initialized = false;
+        boolean isRunnung = true;
 
         ConnectedThread(InputStream stream) {
             mmInStream = stream;
@@ -229,7 +230,7 @@ public class MainActivity extends AppCompatActivity {
             initialized = false;
             Long lastBluetoothPingTimer = System.currentTimeMillis(), lastEmptyPackageTimer = System.currentTimeMillis(), lastStreamTimer = System.currentTimeMillis();
             try {
-                while (true) {
+                while (isRunnung) {
                     if (mmInStream.available() >= data.length) {
                         mmInStream.read(data, 0, data.length);
                         for (i = 0; i < data.length; i++) {
@@ -299,5 +300,10 @@ public class MainActivity extends AppCompatActivity {
             } catch (IOException e) {
             }
         }
+
+        public void close(){
+            isRunnung = false;
+        }
+
     }
 }
