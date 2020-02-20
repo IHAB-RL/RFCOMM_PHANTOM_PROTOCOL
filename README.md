@@ -14,6 +14,10 @@ In theory, all current midclass (or above) Android Smartphones should fulfill th
 - Motorola Moto G6+
 - Samsung Galaxy A6+
 
+## Unsuccessfully tested Smartphones ##
+**Android 9**
+- Samsung Galaxy S10 (~ 5 % data loss) 
+
 ## Boot Sequence
 
 1. continuously blue LED: Bluetooth-Device System Initialisation (~5 seconds)
