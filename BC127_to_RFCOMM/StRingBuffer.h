@@ -1,46 +1,48 @@
 class StRingBuffer
 {
   public:
-    StRingBuffer(int len);
-    String addChar(char val);
-    String Value();
+    StRingBuffer();
+    void addByte(byte val);
+    byte getByte(int pos);
+    String toString();
     void clear();
     int length();
   private:
-    int iLength = 0;
+    static const int iLength = 50;
     int pos = 0;
-    String data = "";
+    byte data[iLength];
 };
 
-StRingBuffer::StRingBuffer(int len)
+StRingBuffer::StRingBuffer()
 {
-  iLength = len;
   clear();
 }
 
 void StRingBuffer::clear()
 {
-  data = "";
   for (pos = 0; pos < iLength; pos++)
-    data += " ";
+    data[pos] = 0;
   pos = 0;
 }
 
-String StRingBuffer::addChar(char val)
+void StRingBuffer::addByte(byte val)
 {
-  if (!isPrintable(val))
-    val = ' ';
-  data.setCharAt(pos, val);
-  pos = (++pos)%iLength;
-  return Value();
+  data[pos] = val;
+  pos = (++pos) % iLength;
 }
 
-String StRingBuffer::Value()
+String StRingBuffer::toString()
 {
+  String myString = String((char*)data);
   if (pos > 0 && iLength > 0)
-    return data.substring(pos) + data.substring(0, pos);
+    return myString.substring(pos) + myString.substring(0, pos);
   else
-    return data;
+    return myString;
+}
+
+byte StRingBuffer::getByte(int offset)
+{
+  return data[(pos - 1 + offset) % iLength];
 }
 
 int StRingBuffer::length()

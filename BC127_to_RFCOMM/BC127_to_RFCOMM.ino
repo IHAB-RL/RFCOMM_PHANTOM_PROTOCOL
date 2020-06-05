@@ -4,7 +4,15 @@
 //sudo cat /dev/rfcomm1 |  aplay -f S16_LE -c 2 -r 22050
 
 #define DEBUG
-#define PROTOCOLVERSION     1
+#define PROTOCOLVERSION     2
+// PROTOCOLVERSION:
+// 1: first full running Version
+// 2: Calibration Factors added. Downward Compatible!!!
+
+/**************************************/
+/*         DO NOT CHANGE HERE         */
+/**************************************/
+
 #define BITS                32 // 16 or 32
 #define FS                  16000
 #define BLOCK_SIZE          64 // in samples for one channel!!! (max value: 64 (for 32 Bit), 128 (for 16 Bit)
@@ -34,7 +42,7 @@ int ledBlue = 21;
 int resetPin = 20;
 
 BC127 BTModu(&serialPort);
-StRingBuffer serialIn = StRingBuffer(50);
+StRingBuffer serialIn = StRingBuffer();
 
 const int additionalBytesCount = 12;
 
@@ -58,6 +66,17 @@ FlashStorage(stored_BluetoothDevice_MAC, MAC);
 unsigned long resetTime = millis();
 unsigned long lastConnectionAttempt = millis();
 unsigned long waitingForConnection = millis();
+
+union {
+   byte byteValue[8];
+   int16_t intValue[4];
+   double doubleValue;
+} calibrationFactor;
+
+FlashStorage(stored_calibrationFactorLeft, double);
+FlashStorage(stored_calibrationFactorChecksumLeft, byte);
+FlashStorage(stored_calibrationFactorRight, double);
+FlashStorage(stored_calibrationFactorChecksumRight, byte);
 
 void setup()
 {
@@ -91,7 +110,7 @@ void loop()
   String BluetoothDevice_MAC = "";
   byte checksum = 0;
   long reconnectionPause = 0;
-  int count; 
+  int count;
   while (true)
   {
     switch (currConnectionState)
@@ -162,6 +181,9 @@ void loop()
           BTModu.stdGetConfig(&value);
           debug(value);
           resetTimer();
+          tmp_MAC = stored_BluetoothDevice_MAC.read();
+          BluetoothDevice_MAC = String(tmp_MAC.value);
+          BluetoothDevice_MAC.trim();
           debug("waiting for SPP...");
           debug("state = WAIT_FOR_CONFIG_MODE");
           currConnectionState = WAIT_FOR_CONFIG_MODE;
@@ -176,7 +198,7 @@ void loop()
         }
         break;
       case WAIT_FOR_CONFIG_MODE:
-        if (millis() - resetTime > 7500) // 7.5 seconds
+        if (millis() - resetTime > 7500 && BluetoothDevice_MAC != "") // 7.5 seconds
         {
           resetTimer();
           debug("state = INIT_ACTIVE_MODE");
@@ -207,7 +229,7 @@ void loop()
         break;
       case CONFIG_MODE:
         LED_blink(ledBlue, 100, 200);
-        if (millis() - resetTime > 10000) // 10 seconds
+        if (millis() - resetTime > 60000) // 60 seconds
         {
           resetTimer();
           debug("state = INIT_ACTIVE_MODE");
@@ -215,8 +237,8 @@ void loop()
         }
         else if (serialPort.available())
         {
-          serialIn.addChar(serialPort.read());
-          if (serialIn.Value().indexOf("STOREMAC") >= 0)
+          serialIn.addByte(serialPort.read());
+          if (serialIn.toString().indexOf("STOREMAC") >= 0) 
           {
             BluetoothDevice_MAC.toCharArray(tmp_MAC.value, 13);
             stored_BluetoothDevice_MAC.write(tmp_MAC);
@@ -268,9 +290,9 @@ void loop()
           if (serialPort.available())
           {
             while (serialPort.available())
-              serialIn.addChar(serialPort.read());
+              serialIn.addByte(serialPort.read());
             //debug(serialIn.Value());
-            if (serialIn.Value().indexOf("CLOSE_OK 15 SPP") < 0 && serialIn.Value().indexOf("OK 15 SPP") >= 0)
+            if (serialIn.toString().indexOf("CLOSE_OK 15 SPP") < 0 && serialIn.toString().indexOf("OK 15 SPP") >= 0)
             {
               green();
               debug("ENTER_DATA_MODE 15...");
@@ -298,10 +320,10 @@ void loop()
       case ACTIVE_MODE:
         if (serialPort.available())
         {
-          serialIn.addChar(serialPort.read());
-          if (serialIn.Value().indexOf("CLOSE_OK 15 SPP") >= 0 || (serialIn.Value().indexOf("ERROR") >= 0 && serialIn.Value().indexOf("ERROR") <= serialIn.length() - 20))
+          serialIn.addByte(serialPort.read());
+          if (serialIn.toString().indexOf("CLOSE_OK 15 SPP") >= 0 || (serialIn.toString().indexOf("ERROR") >= 0 && serialIn.toString().indexOf("ERROR") <= serialIn.length() - 20))
           {
-            String tmp =  serialIn.Value(); tmp.trim();
+            String tmp =  serialIn.toString(); tmp.trim();
             debug(String("Connection lost: ") + tmp);
             debug("state = ACTIVE_MODE_WAIT_FOR_CONNECTION");
             currConnectionState = ACTIVE_MODE_WAIT_FOR_CONNECTION;
@@ -310,25 +332,37 @@ void loop()
             serialPort.flush();
             resetTimer();
           }
-          else if (serialIn.Value().charAt(serialIn.length() - 3) == 'V' &&  isDigit(serialIn.Value().charAt(serialIn.length() - 1)))
+          else if (serialIn.getByte(-3) == 'V' &&  isDigit(serialIn.getByte(-1)))
           {
-            int16_t newVol = int16_t(serialIn.Value().charAt(serialIn.length() - 1) - '0');
+            int16_t newVol = int16_t(serialIn.getByte(-1) - '0');
             if (newVol >= 0 and newVol <= 9)
-            { 
-              if (serialIn.Value().charAt(serialIn.length() - 2) == '+')
+            {
+              if (serialIn.getByte(-2) == '+')
                 volume = newVol;
-              else if (serialIn.Value().charAt(serialIn.length() - 2) == '-')
+              else if (serialIn.getByte(-2) == '-')
                 volume = -newVol;
               debug("Volume = " + String(volume));
             }
             serialIn.clear();
           }
-          else if (serialIn.Value().charAt(serialIn.length() - 2) == 'B' &&  isDigit(serialIn.Value().charAt(serialIn.length() - 1)))
+          else if (serialIn.getByte(-2) == 'B' &&  isDigit(serialIn.getByte(-1)))
           {
-            adaptiveBitShift = bool(serialIn.Value().charAt(serialIn.length() - 1) - '0');
+            adaptiveBitShift = bool(serialIn.getByte(-1) - '0');
             debug("Adaptive Bit Shift = " + String(adaptiveBitShift));
             if (adaptiveBitShift == false)
               volume = 0;
+            serialIn.clear();
+          }
+          else if (serialIn.getByte(-10) == 'C' && (serialIn.getByte(-9) == 'L' || serialIn.getByte(-9) == 'R')) // Receive Calibration-Values from Smartphone
+          {
+            storeCalibValue(serialIn.getByte(-9));
+            serialIn.clear();
+          }
+          else if (serialIn.getByte(-1) == 'G' && serialIn.getByte(0) == 'C') // Request from Smartphone for Calibration-Values
+          {
+            debug("Request from Smartphone for Calibration-Values");
+            sendCalibValue('L');
+            sendCalibValue('R');
             serialIn.clear();
           }
         }
@@ -348,7 +382,7 @@ void loop()
           sample_buffer_send.ints[sizeOfIntArray - 4] = ++blockCounter;
           sample_buffer_send.ints[sizeOfIntArray - 3] = PROTOCOLVERSION;
           sample_buffer_send.ints[sizeOfIntArray - 2] = 0x00 << 8 | 0x80;
-          sample_buffer_send.ints[sizeOfIntArray - 1] = 0; 
+          sample_buffer_send.ints[sizeOfIntArray - 1] = 0;
           checksum = 0;
           for (count = 0; count < sizeOfByteArray; count++)
           {
@@ -362,6 +396,64 @@ void loop()
         break;
     }
   }
+}
+
+void storeCalibValue(char side)
+{
+  byte checksum = side;
+  for (int count = 0; count < 8; count++)
+  {
+    calibrationFactor.byteValue[count] = serialIn.getByte(-count - 1);
+    checksum ^= serialIn.getByte(count - 8);
+  }
+  if (checksum == serialIn.getByte(0)  )
+  {
+    if (side == 'L' && calibrationFactor.doubleValue != stored_calibrationFactorLeft.read()) { 
+      stored_calibrationFactorLeft.write(calibrationFactor.doubleValue);
+      stored_calibrationFactorChecksumLeft.write(checksum);
+      debug ("calibrationFactorLeft stored!");
+    }
+    else if (side == 'R' && calibrationFactor.doubleValue != stored_calibrationFactorRight.read()) {
+      stored_calibrationFactorRight.write(calibrationFactor.doubleValue);
+      stored_calibrationFactorChecksumRight.write(checksum);
+      debug ("calibrationFactorRight stored!");
+    }
+  }
+}
+
+void sendCalibValue(char side)
+{
+  byte checksum = side;
+  byte calibrationFactorChecksum;
+  if (side == 'L')
+  {
+    calibrationFactor.doubleValue = stored_calibrationFactorLeft.read();
+    calibrationFactorChecksum = stored_calibrationFactorChecksumLeft.read();
+  }
+  else if (side == 'R') 
+  {
+    calibrationFactor.doubleValue = stored_calibrationFactorRight.read();
+    calibrationFactorChecksum = stored_calibrationFactorChecksumRight.read();
+  }
+  else
+    return;
+  for (int count = 0; count < 8; count++) 
+    checksum ^= calibrationFactor.byteValue[count];
+  if (checksum != calibrationFactorChecksum)
+  {
+    debug(String("CalibValue ") + side + String(" failure (in Flash), set Value to 0!"));
+    calibrationFactor.doubleValue = 0;
+    checksum = side;
+  }
+  sample_buffer_send.ints[0] = 0xFF << 8 | 0x7F;
+  serialPort.write(sample_buffer_send.bytes, 2);
+  serialPort.write("C");
+  serialPort.write(side);
+  for (int count = 0; count < 8; count++) 
+    serialPort.write(calibrationFactor.byteValue[7 - count]);
+  serialPort.write(checksum);
+  sample_buffer_send.ints[0] = 0x00 << 8 | 0x80;
+  serialPort.write(sample_buffer_send.bytes, 2);
 }
 
 void red()
@@ -439,7 +531,7 @@ void restoreBC127()
   }
   if (serialPort)
     serialPort.end();
-  serialIn.addChar(' ');
+  serialIn.clear();
 }
 
 void resetBC127()

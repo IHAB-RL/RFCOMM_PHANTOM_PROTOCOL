@@ -114,6 +114,67 @@
 
         <LinearLayout
             android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:orientation="horizontal"
+            android:visibility="visible"
+            android:weightSum="1"
+            app:layout_constraintHorizontal_bias="0.505"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            tools:layout_editor_absoluteY="193dp">
+
+            <TextView
+                android:id="@+id/textCL"
+                android:layout_width="20dp"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="8dp"
+                android:layout_marginTop="8dp"
+                android:text="CL" />
+
+            <EditText
+                android:id="@+id/textCalibValueLeft"
+                android:layout_width="120dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:editable="true"
+                android:enabled="true"
+                android:inputType="number|numberDecimal"
+                android:numeric="decimal"
+                android:textAlignment="textEnd" />
+
+            <TextView
+                android:id="@+id/textCR"
+                android:layout_width="20dp"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="8dp"
+                android:layout_marginTop="8dp"
+                android:text="CR" />
+
+            <EditText
+                android:id="@+id/textCalibValueRight"
+                android:layout_width="120dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:editable="true"
+                android:enabled="true"
+                android:inputType="number|numberDecimal"
+                android:numeric="decimal"
+                android:textAlignment="textEnd" />
+
+            <Button
+                android:id="@+id/button_Calib"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:text="calib"
+                android:visibility="visible" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="30dp"
             android:layout_marginEnd="8dp"
             android:layout_marginLeft="8dp"
