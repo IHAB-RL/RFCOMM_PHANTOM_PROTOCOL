@@ -3,6 +3,9 @@
 In theory, all current midclass (or above) Android Smartphones should fulfill the requirements. Smartphones without bloatware should be preferred, like Andoid One Phones. Best results were achieved with Motorola phones.
 
 ## Successfully tested Smartphones ##
+**Android 10**
+- Nokia 7+ (with deactivated Google Play Service)
+
 **Android 9**
 - Motorola Moto G8+
 - Nokia 7+
@@ -52,3 +55,6 @@ Reset "Restore Network Settings":
 
 ### Motorola Moto G8+
 - high datapackage loss when display gets activated (solution in  "Troubleshoot: Avoiding package loss")
+
+### Noika 7+ with Android 10
+- high datapackage loss when Google Play Service is active. Please deactivate under -> Preferences -> Apps
